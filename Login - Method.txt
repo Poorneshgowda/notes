@@ -1,0 +1,196 @@
+
+******----LOGIN---JWT---method----********
+
+
+--------------------------------------------------------------------------------------------------------------------------------------
+package--DTO
+Login.java
+------------------------------------------------------------------------------------------------------------------------------------
+package com.main.Dto;
+
+public class Login {
+    
+    private String userName;
+    private String password;
+    public String getUserName() {
+        return userName;
+    }
+    public void setMemberId(String userName) {
+        this.userName = userName;
+    }
+    public String getPassword() {
+        return password;
+    }
+    public void setPassword(String password) {
+        this.password = password;
+    }
+}
+
+
+-----------------------------------------------------------------------------------------------------------------------------------
+package--Common
+ApiResponse
+----------------------------------------------------------------------------------------------------------------------------------
+package com.main.Common;
+
+public class ApiResponse {
+    private Object data;
+    private Object error;
+    private Integer status;
+    public Object getData() {
+        return data;
+    }
+    public void setData(Object data) {
+        this.data = data;
+    }
+    public Object getError() {
+        return error;
+    }
+    public void setError(Object error) {
+        this.error = error;
+    }
+    public Integer getStatus() {
+        return status;
+    }
+    public void setStatus(Integer status) {
+        this.status = status;
+    }
+    
+    
+}
+-----------------------------------------------------------------------------------------------------------------------------------
+package utils
+jwtUtils
+-----------------------------------------------------------------------------------------------------------------------------------
+package com.main.Util;
+
+import java.util.Date;
+import org.springframework.stereotype.Component;
+
+import com.main.Exception.AccessDeniedException;
+import com.main.Model.Member;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+
+//JWT claims can typically be used to pass identity of authenticated users between an identity 
+//provider and a service provider,
+
+@Component
+public class jwtUtils {
+   private static String secret = "this_is_secret"; 
+   private static long expiryDuration=60*60;
+    
+    public String generateJwt(Member member)
+    {
+    	  long milliTime=System.currentTimeMillis();
+          long expiryTime=milliTime+expiryDuration*1000;   
+ //claims
+        
+        Date issuedAt=new Date(milliTime);
+        Date expiryAt=new Date(expiryTime);
+        
+        Claims claims=Jwts.claims().setIssuer(Integer.toString(member.getMemberId()))
+                .setIssuedAt(issuedAt);
+                
+        
+            
+       // claims.put("type", user.getUserType());
+        claims.put("name", member.getMemberName());
+        claims.put("email_id", member.getEmailId());
+                
+        //generate jwt using claims
+        return Jwts.builder()
+                .signWith(SignatureAlgorithm.HS512, secret)
+                .setClaims(claims)
+                .compact();
+                
+                
+        
+        
+    }
+    public void verify(String authentication)throws Exception {
+    	
+    	try {
+    		Jwts.parser().setSigningKey(secret).parseClaimsJws(authentication);
+    	}
+    	
+    	catch(Exception e){
+    		//throw new Exception();
+    		throw new AccessDeniedException("ACCESS DENIED!");
+    		
+    	}
+    }
+
+
+
+}
+
+
+
+---------------------------------------------------------------------------------------------------------------------------------
+controller
+------------------------------------------------------------------------------------------------------------------------------------------
+
+@Autowired
+jwtUtils jwtUtils;
+
+//Login
+  	@PostMapping("/loginCheck")
+	    public ResponseEntity<ApiResponse> loginCheck(@RequestBody Login login)
+	    {   
+	        String status= null;
+	        
+	        ApiResponse apiResponse=memberService.LoginCheck(login);
+	        return new  ResponseEntity<ApiResponse>(apiResponse,HttpStatus.OK);
+	    }
+
+
+//PRIVATE API FOR LOGIN CHECK
+
+	@PostMapping("/privateApi")
+	    public ResponseEntity <ApiResponse> privateApi
+	    ( @RequestHeader(value = "authorization", defaultValue = "") String auth) throws Exception {
+
+	    ApiResponse apiResponse=new ApiResponse();
+	    // String
+	    jwtUtils.verify(auth);
+
+	    apiResponse.setData("WELCOME! This is private API");
+
+	    return new ResponseEntity<ApiResponse>(apiResponse, HttpStatus.OK);
+
+	    }
+----------------------------------------------------------------------------------------------------------------------------
+Repository
+----------------------------------------------------------------------------------------------------------------------------------
+{
+public Member findByUserNameAndPassword(String userName, String password);
+}    
+-----------------------------------------------------------------------------------------------------------------------------------
+service
+-----------------------------------------------------------------------------------------------------------------------------------
+
+@Autowired
+jwtUtils jwtUtils;
+
+public ApiResponse LoginCheck(Login login) {
+	        ApiResponse apiResponse=new ApiResponse();
+	        Member member=memberRepo.findByUserNameAndPassword(login.getUserName(), login.getPassword());
+	        if(member==null)
+	        {
+	        	apiResponse.setData("Unable to login in!");
+	        }
+	        else {
+	        	
+	      
+			String token=jwtUtils.generateJwt(member);
+	        	//apiResponse.setData(token);
+			
+			Map<String, Object> data = new HashMap<>();
+			data.put("accessToken", token);
+			apiResponse.setData(data);
+			
+	        }
+	        return apiResponse;
+	   }	

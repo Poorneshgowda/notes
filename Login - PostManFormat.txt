@@ -1,0 +1,10 @@
+Json Format for Login
+
+PostMapping
+http://localhost:8111/home/loginCheck
+
+
+{
+   "userName":"Poornesh",
+    "password":"Poornesh@123"
+}

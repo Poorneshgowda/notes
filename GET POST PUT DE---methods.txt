@@ -1,0 +1,106 @@
+
+****GET****POST***PUT***DELETE*****
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+controller
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+@RestController
+@RequestMapping("/home")
+public class MemberController {
+	
+	@Autowired
+	private MemberRepo memberRepo;
+	@Autowired
+	private MemberService memberService;
+	@Autowired
+	private jwtUtils jwtUtils;
+	/*
+	 * @Autowired private ApiResponse apiResponse;
+	 */
+
+////////////////////////////////////////////////////////////////////////////////
+	//fetch all members
+	@GetMapping("/getMember") 
+	public ResponseEntity< List<Member>> findAllEmployees()
+	{ 
+	
+		List<Member> member = memberService.getAllEmployees()	;
+		return new ResponseEntity<List<Member>>(member,HttpStatus.OK);
+	}
+
+///////////////////////////////////////////////////////////////////////////////////////
+	
+	//add member
+	@PostMapping("/addMember")
+	public  ResponseEntity<Member> createEmployee( @RequestBody Member member) { 
+		Member member1=memberService.createMember(member);
+		return new ResponseEntity<Member>(member1,HttpStatus.OK);
+		}
+
+//////////////////////////////////////////////////////////////////////////////////////
+	
+	//Delete member
+	 @DeleteMapping("/deletemem/{id}")
+	    public ResponseEntity<String> deleteMembereByID(@PathVariable("id") Integer id) {
+		 Optional<Member> optional = memberRepo.findById(id);
+		 if(!optional.isPresent())
+	        	throw new RuntimeException("Invalid ID");
+		 if(optional.isPresent())
+		 memberRepo.deleteById(id);
+				return new ResponseEntity<>(HttpStatus.OK);
+		 
+	 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+	 
+	 //Update info of particular member
+	 @PutMapping("/updatemem/{id}")
+	    public Member updateMember(@PathVariable("id") Integer id,
+	    		@RequestBody Member member)  {
+	       Optional<Member> optional = memberRepo.findById(id);
+	        if(!optional.isPresent())
+	        	throw new RuntimeException("Invalid ID");
+	        
+	        Member member1 =optional.get();
+	       
+	        member1.setMemberName(member.getMemberName());
+	       member1.setDob(member.getDob());
+	       member1.setAddress(member.getAddress());
+	       member1.setState(member.getState());
+	       member1.setCountry(member.getCountry());
+	       member1.setEmailId(member.getEmailId());
+	       member1.setContact(member.getContact());
+	       member1.setUserName(member.getUserName());
+	       member1.setPassword(member.getPassword());
+	      
+	       
+	        return memberRepo.save(member1);
+	        
+	    }
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+repository
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+@Repository
+public interface MemberRepo extends JpaRepository<Member, Integer>{
+	
+	public Member findByUserNameAndPassword(String userName, String password);
+
+}
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Service
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+@Service
+public Member createMember(Member member) {
+	        return memberRepo.save(member);
+
+	   }
+	   
+	   public List<Member> getAllEmployees(){ 
+		   return memberRepo.findAll(); 
+	   }
+
+
+
